@@ -1,9 +1,15 @@
 {
    "name": "aggregator",
+   "version": "1.0.0",
    "private": true,
    "type": "module",
-   "main": "index.ts",
    "scripts": {
-      "start": "bun run index.ts"
+      "start": "bun run src/service.ts",
+      "dev": "bun run --watch src/service.ts"
+   },
+   "dependencies": {
+      "kafkajs": "^2.2.4",
+      "openai": "^6.21.0",
+      "zod": "^4.3.6"
    }
 }
