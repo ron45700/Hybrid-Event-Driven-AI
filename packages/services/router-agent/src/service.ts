@@ -17,7 +17,6 @@ import {
 } from '../../shared/event-schemas';
 import { PLAN_GENERATION_PROMPT } from './prompts';
 import type { Producer, Consumer } from 'kafkajs';
-import { v4 as uuidv4 } from 'crypto';
 
 // ============================================
 // OpenAI Client

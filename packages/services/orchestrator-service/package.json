@@ -1,5 +1,5 @@
 {
-   "name": "router-agent",
+   "name": "orchestrator-service",
    "version": "1.0.0",
    "private": true,
    "type": "module",
@@ -8,9 +8,7 @@
       "dev": "bun run --watch src/service.ts"
    },
    "dependencies": {
-      "dotenv": "^17.3.0",
       "kafkajs": "^2.2.4",
-      "openai": "^6.21.0",
       "zod": "^4.3.6"
    }
 }
