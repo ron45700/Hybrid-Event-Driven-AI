@@ -1,15 +1,20 @@
 // ============================================
 // UserInterface Service
 // Bridges the Express API with Kafka messaging
+//
+// GATEWAY SWITCH (Phase 7):
+//   Producer → user-commands (UserQueryReceived)
+//   Consumer → bot_output_events (Legacy, unchanged)
 // ============================================
 
 import { createProducer, createConsumer } from '../shared/kafka-client';
 import {
    TOPICS,
-   type UserInputMessage,
+   ES_TOPICS,
    type BotResponseMessage,
    type UserControlMessage,
 } from '../shared/kafka-topics';
+import type { UserQueryReceived } from '../shared/event-schemas';
 import type { Producer, Consumer } from 'kafkajs';
 
 // Pending response handlers (correlationId -> resolve function)
@@ -19,13 +24,6 @@ const pendingResponses = new Map<string, (response: string) => void>();
 let producer: Producer;
 let consumer: Consumer;
 let isInitialized = false;
-
-/**
- * Generate unique correlation ID
- */
-function generateCorrelationId(): string {
-   return `${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
-}
 
 /**
  * Initialize Kafka connections
@@ -39,7 +37,7 @@ async function initialize(): Promise<void> {
    producer = createProducer();
    await producer.connect();
 
-   // Create and connect consumer for bot responses
+   // Create and connect consumer for bot responses (LEGACY — unchanged)
    consumer = createConsumer('user-interface-group');
    await consumer.connect();
    await consumer.subscribe({
@@ -73,26 +71,29 @@ async function initialize(): Promise<void> {
 }
 
 /**
- * Send user message and wait for response
+ * Send user message via the Event-Sourced pipeline and wait for response.
+ *
+ * Produces a `UserQueryReceived` event to `user-commands`.
+ * The Aggregator will eventually produce the final answer to `bot_output_events`,
+ * which our consumer above picks up and resolves the pending promise.
+ *
  * @param prompt - User's message
- * @param sessionId - Session identifier
- * @param timeoutMs - Timeout in milliseconds (default: 30s)
+ * @param conversationId - Conversation UUID
+ * @param timeoutMs - Timeout in milliseconds (default: 45s)
  */
 async function sendMessage(
    prompt: string,
-   sessionId: string,
-   timeoutMs: number = 30000
+   conversationId: string,
+   timeoutMs: number = 45000
 ): Promise<string> {
    await initialize();
 
-   const correlationId = generateCorrelationId();
+   const correlationId = crypto.randomUUID();
 
    // Create promise that resolves when response arrives
    const responsePromise = new Promise<string>((resolve, reject) => {
-      // Add to pending map
       pendingResponses.set(correlationId, resolve);
 
-      // Set timeout
       setTimeout(() => {
          if (pendingResponses.has(correlationId)) {
             pendingResponses.delete(correlationId);
@@ -101,20 +102,32 @@ async function sendMessage(
       }, timeoutMs);
    });
 
-   // Create and send message
-   const message: UserInputMessage = {
+   // Build UserQueryReceived event (matches Zod schema)
+   const event: UserQueryReceived = {
+      eventType: 'UserQueryReceived',
       correlationId,
       timestamp: Date.now(),
-      prompt,
-      sessionId,
+      payload: {
+         userId: 'web-user',
+         query: prompt,
+         conversationId,
+      },
    };
 
+   // Produce to user-commands (the Router Agent's input topic)
    await producer.send({
-      topic: TOPICS.USER_INPUT,
-      messages: [{ value: JSON.stringify(message) }],
+      topic: ES_TOPICS.USER_COMMANDS,
+      messages: [
+         {
+            key: correlationId,
+            value: JSON.stringify(event),
+         },
+      ],
    });
 
-   console.log(`📤 UserInterface: Sent message [${correlationId}]`);
+   console.log(
+      `📤 UserInterface: Sent UserQueryReceived [${correlationId}] → user-commands`
+   );
 
    return responsePromise;
 }
@@ -127,7 +140,7 @@ async function sendResetCommand(sessionId: string): Promise<void> {
    await initialize();
 
    const message: UserControlMessage = {
-      correlationId: generateCorrelationId(),
+      correlationId: crypto.randomUUID(),
       timestamp: Date.now(),
       action: 'reset',
       sessionId,
