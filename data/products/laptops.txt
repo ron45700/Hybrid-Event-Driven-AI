@@ -1,0 +1,57 @@
+Product Category: Laptops
+
+---
+
+Product: TechPro UltraBook X15
+Price: $1,299
+Description: Ultra-thin 15.6-inch laptop with Intel Core i7-13700H processor, 16GB DDR5 RAM, 512GB NVMe SSD, and a stunning 2.8K OLED display. Weighs only 1.5kg with up to 12 hours battery life. Perfect for professionals who need power on the go.
+Features: Thunderbolt 4, Wi-Fi 6E, Fingerprint reader, Backlit keyboard, Windows 11 Pro
+Rating: 4.7/5
+
+---
+
+Product: GameForce Titan RTX
+Price: $2,199
+Description: High-performance gaming laptop featuring NVIDIA RTX 4070 graphics, AMD Ryzen 9 7945HX processor, 32GB DDR5 RAM, 1TB NVMe SSD. 17.3-inch QHD 240Hz display with G-Sync. Advanced cooling system with liquid metal thermal compound.
+Features: RGB per-key keyboard, 2.5Gbps Ethernet, Wi-Fi 6E, Thunderbolt 4, 4-zone speaker system
+Rating: 4.8/5
+
+---
+
+Product: StudentBook Lite 14
+Price: $499
+Description: Affordable 14-inch laptop designed for students. Intel Core i5-1335U processor, 8GB DDR4 RAM, 256GB SSD. Lightweight at 1.3kg with a durable plastic chassis. 10-hour battery life keeps you going through the school day.
+Features: HD webcam, USB-C charging, microSD slot, Windows 11 Home, Free 1-year Microsoft 365
+Rating: 4.3/5
+
+---
+
+Product: CreatorStation Pro 16
+Price: $2,499
+Description: Professional content creation laptop with Apple M3 Max chip, 36GB unified memory, 1TB SSD. 16.2-inch Liquid Retina XDR display with ProMotion 120Hz. Ideal for video editing, 3D rendering, and music production.
+Features: HDMI 2.1, SDXC card slot, MagSafe charging, 22-hour battery life, Six-speaker sound system
+Rating: 4.9/5
+
+---
+
+Product: BizBook Enterprise 13
+Price: $899
+Description: Business-class 13.3-inch laptop built for enterprise environments. Intel vPro with Core i5-1345U, 16GB DDR5 RAM, 256GB SSD. MIL-STD-810H durability certified. Features comprehensive security with TPM 2.0 and Smart Card reader.
+Features: 4G LTE option, Spill-resistant keyboard, Anti-glare display, Windows 11 Pro, 3-year warranty
+Rating: 4.5/5
+
+---
+
+Product: TabletBook Flex 2-in-1
+Price: $749
+Description: Versatile 2-in-1 convertible with 13.3-inch touchscreen, Intel Core i5-1340P, 8GB RAM, 512GB SSD. 360-degree hinge lets you use it as a laptop, tablet, or tent mode. Includes active stylus for note-taking and drawing.
+Features: Active pen support, Tent mode, Tablet mode, Windows 11 Home, Gorilla Glass display
+Rating: 4.4/5
+
+---
+
+Product: BudgetPC Essential 15
+Price: $329
+Description: Entry-level 15.6-inch laptop for basic computing needs. Intel Celeron N4500, 4GB RAM, 128GB eMMC storage. Full HD display with anti-glare coating. Ideal for web browsing, email, and light document work.
+Features: USB 3.0, HDMI output, 8-hour battery, Lightweight at 1.7kg, Chrome OS option available
+Rating: 3.9/5

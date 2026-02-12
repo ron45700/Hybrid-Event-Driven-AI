@@ -1,17 +1,22 @@
 // ============================================
-// MathApp Worker
-// Evaluates mathematical expressions
-// Supports Chain-of-Thought for word problems
+// MathApp Worker (Event-Sourced CQRS)
+// Listens to: tool-invocation-requests (toolName="math")
+// Produces to: conversation-events (ToolInvocationResulted)
+// Business logic preserved: pure math + CoT word problems
 // ============================================
 
 import { OpenAI } from 'openai';
 import { createProducer, createConsumer } from '../../shared/kafka-client';
 import {
    TOPICS,
-   type FunctionExecutionRequest,
-   type AppResultMessage,
+   ES_TOPICS,
    type CoTMathMessage,
 } from '../../shared/kafka-topics';
+import {
+   ToolInvocationRequestedSchema,
+   type ToolInvocationRequested,
+   type ToolInvocationResulted,
+} from '../../shared/event-schemas';
 import { MATH_COT_PROMPT } from '../../shared/prompts';
 import type { Producer, Consumer } from 'kafkajs';
 
@@ -24,29 +29,23 @@ let producer: Producer;
 let consumer: Consumer;
 let isRunning = false;
 
-// Pattern to detect if input is a pure math expression
+// ============================================
+// Business Logic (preserved from original)
+// ============================================
+
 const PURE_MATH_PATTERN = /^[\d+\-*/().\s]+$/;
 
-/**
- * Check if the expression is a word problem (contains words, not just math)
- */
 function isWordProblem(expression: string): boolean {
    return !PURE_MATH_PATTERN.test(expression.trim());
 }
 
-/**
- * Use OpenAI to extract math expression from word problem (Chain of Thought)
- */
 async function extractExpressionFromWordProblem(
    wordProblem: string
 ): Promise<{ expression: string; reasoning: string }> {
    const response = await openai.chat.completions.create({
       model: 'gpt-4o-mini',
       messages: [
-         {
-            role: 'system',
-            content: MATH_COT_PROMPT,
-         },
+         { role: 'system', content: MATH_COT_PROMPT },
          { role: 'user', content: wordProblem },
       ],
       temperature: 0,
@@ -68,12 +67,8 @@ async function extractExpressionFromWordProblem(
    }
 }
 
-/**
- * Safely evaluate a mathematical expression
- */
 function calculateMath(expression: string): string {
    try {
-      // Sanitize: only allow numbers, operators, parentheses, decimals
       const sanitized = expression.replace(/\s/g, '');
       const validPattern = /^[\d+\-*/().]+$/;
 
@@ -81,7 +76,6 @@ function calculateMath(expression: string): string {
          return 'Error: Invalid characters in expression';
       }
 
-      // Use Function constructor for safe evaluation
       const result = new Function(`return (${sanitized})`)();
 
       if (typeof result !== 'number' || !isFinite(result)) {
@@ -94,21 +88,106 @@ function calculateMath(expression: string): string {
    }
 }
 
-/**
- * Start the MathApp worker
- */
+// ============================================
+// Event Handler (new CQRS pattern)
+// ============================================
+
+async function handleToolInvocation(
+   event: ToolInvocationRequested
+): Promise<void> {
+   const { correlationId, payload } = event;
+   const { planId, stepIndex, toolInput, conversationId } = payload;
+
+   console.log(`📥 MathApp: Processing [${correlationId}] step=${stepIndex}`);
+
+   const startTime = Date.now();
+   let resultText = '';
+   let success = true;
+   let errorMessage: string | undefined;
+
+   try {
+      let expression = (toolInput as { expression?: string }).expression || '';
+      let reasoning = '';
+
+      // Chain-of-Thought for word problems
+      if (isWordProblem(expression)) {
+         console.log(`🧠 MathApp: Word problem detected, using CoT...`);
+         const cot = await extractExpressionFromWordProblem(expression);
+         reasoning = cot.reasoning;
+
+         // Publish CoT audit event (legacy topic preserved)
+         const cotMessage: CoTMathMessage = {
+            correlationId,
+            timestamp: Date.now(),
+            originalProblem: expression,
+            extractedExpression: cot.expression,
+            reasoning: cot.reasoning,
+            sessionId: conversationId,
+         };
+
+         await producer.send({
+            topic: TOPICS.COT_MATH,
+            messages: [{ value: JSON.stringify(cotMessage) }],
+         });
+
+         expression = cot.expression;
+      }
+
+      const calculationResult = calculateMath(expression);
+      resultText = reasoning
+         ? `${reasoning}\n\n${calculationResult}`
+         : calculationResult;
+   } catch (error) {
+      success = false;
+      errorMessage = `MathApp error: ${error}`;
+      console.error(`❌ MathApp: ${errorMessage}`);
+   }
+
+   const durationMs = Date.now() - startTime;
+
+   // Emit ToolInvocationResulted → conversation-events
+   const resultEvent: ToolInvocationResulted = {
+      eventType: 'ToolInvocationResulted',
+      correlationId,
+      timestamp: Date.now(),
+      payload: {
+         planId,
+         stepIndex,
+         toolName: 'math',
+         result: resultText,
+         success,
+         durationMs,
+         ...(errorMessage && { errorMessage }),
+      },
+   };
+
+   await producer.send({
+      topic: ES_TOPICS.CONVERSATION_EVENTS,
+      messages: [{ key: correlationId, value: JSON.stringify(resultEvent) }],
+   });
+
+   console.log(
+      `📤 MathApp: Published ToolInvocationResulted [${correlationId}] ` +
+         `success=${success} duration=${durationMs}ms`
+   );
+}
+
+// ============================================
+// Service Lifecycle
+// ============================================
+
 async function start(): Promise<void> {
    if (isRunning) return;
 
-   console.log('🔌 MathApp: Starting (with Chain-of-Thought)...');
+   console.log('🔌 MathApp: Starting (CQRS mode)...');
 
    producer = createProducer();
-   consumer = createConsumer('math-app-group');
+   consumer = createConsumer('math-app-es-group');
 
    await producer.connect();
    await consumer.connect();
    await consumer.subscribe({
-      topic: TOPICS.ENRICHED_EXECUTION,
+      topic: ES_TOPICS.TOOL_INVOCATION_REQUESTS,
       fromBeginning: false,
    });
 
@@ -117,84 +196,22 @@ async function start(): Promise<void> {
          if (!message.value) return;
 
          try {
-            const execRequest: FunctionExecutionRequest = JSON.parse(
-               message.value.toString()
-            );
+            const parsed = JSON.parse(message.value.toString());
 
-            // Only process math requests
-            if (execRequest.functionName !== 'math') return;
+            // Filter: only process math requests
+            if (parsed.payload?.toolName !== 'math') return;
 
-            console.log(
-               `📥 MathApp: Processing [${execRequest.correlationId}]`
-            );
-
-            // Get expression from parameters
-            let expression =
-               (execRequest.parameters as { expression?: string }).expression ||
-               '';
-            let reasoning = '';
-
-            // Check if it's a word problem → use Chain of Thought
-            if (isWordProblem(expression)) {
-               console.log(
-                  `🧠 MathApp: Detected word problem, using Chain-of-Thought...`
+            const validation = ToolInvocationRequestedSchema.safeParse(parsed);
+            if (!validation.success) {
+               console.error(
+                  'MathApp: Invalid event:',
+                  validation.error.format()
                );
-               console.log(`   Original: "${expression}"`);
-
-               const cot = await extractExpressionFromWordProblem(expression);
-               reasoning = cot.reasoning;
-
-               console.log(`   Reasoning: ${cot.reasoning}`);
-               console.log(`   Extracted: "${cot.expression}"`);
-
-               // Publish CoT event for logging/auditing
-               const cotMessage: CoTMathMessage = {
-                  correlationId: execRequest.correlationId,
-                  timestamp: Date.now(),
-                  originalProblem: expression,
-                  extractedExpression: cot.expression,
-                  reasoning: cot.reasoning,
-                  sessionId: execRequest.sessionId,
-               };
-
-               await producer.send({
-                  topic: TOPICS.COT_MATH,
-                  messages: [{ value: JSON.stringify(cotMessage) }],
-               });
-
-               console.log(
-                  `📤 MathApp: Published CoT event → cot_math_expression_events`
-               );
-
-               // Use the extracted expression
-               expression = cot.expression;
+               return;
             }
 
-            // Calculate the result
-            const calculationResult = calculateMath(expression);
-
-            // Build response with reasoning if CoT was used
-            const response = reasoning
-               ? `${reasoning}\n\n${calculationResult}`
-               : calculationResult;
-
-            // Publish result
-            const result: AppResultMessage = {
-               correlationId: execRequest.correlationId,
-               timestamp: Date.now(),
-               source: 'math',
-               prompt: expression,
-               response,
-               sessionId: execRequest.sessionId,
-            };
-
-            await producer.send({
-               topic: TOPICS.APP_RESULTS,
-               messages: [{ value: JSON.stringify(result) }],
-            });
-
-            console.log(
-               `📤 MathApp: Published result [${execRequest.correlationId}]`
+            await handleToolInvocation(
+               validation.data as ToolInvocationRequested
             );
          } catch (error) {
             console.error('MathApp: Error processing message:', error);
@@ -203,12 +220,11 @@ async function start(): Promise<void> {
    });
 
    isRunning = true;
-   console.log('✅ MathApp: Running');
+   console.log(
+      '✅ MathApp: Running (CQRS — listening on tool-invocation-requests)'
+   );
 }
 
-/**
- * Stop the MathApp worker
- */
 async function stop(): Promise<void> {
    console.log('🔌 MathApp: Stopping...');
    await consumer?.disconnect();
@@ -219,7 +235,6 @@ async function stop(): Promise<void> {
 
 export const mathApp = { start, stop };
 
-// Run as standalone
 if (import.meta.main) {
    start().catch(console.error);
    process.on('SIGINT', async () => {

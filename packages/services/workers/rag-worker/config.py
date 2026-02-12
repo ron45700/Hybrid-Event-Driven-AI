@@ -24,9 +24,19 @@ CHROMA_PORT = int(os.getenv("CHROMA_PORT", "8000"))
 CHROMA_COLLECTION_NAME = "products"
 
 # ============================================
-# OpenAI Configuration (for embeddings)
+# Embedding Model (HuggingFace / sentence-transformers)
 # ============================================
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
+EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "all-MiniLM-L6-v2")
+
+# ============================================
+# Product Data Directory
+# ============================================
+PRODUCTS_DATA_DIR = os.getenv("PRODUCTS_DATA_DIR", "/app/data/products")
+
+# ============================================
+# RAG Settings
+# ============================================
+TOP_K_RESULTS = 3  # Number of chunks to retrieve
 
 # ============================================
 # Worker Identity

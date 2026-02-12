@@ -1,14 +1,17 @@
 // ============================================
-// WeatherApp Worker
-// Fetches weather data from Open-Meteo API
+// WeatherApp Worker (Event-Sourced CQRS)
+// Listens to: tool-invocation-requests (toolName="weather")
+// Produces to: conversation-events (ToolInvocationResulted)
+// Business logic preserved: Open-Meteo geocoding + weather API
 // ============================================
 
 import { createProducer, createConsumer } from '../../shared/kafka-client';
+import { ES_TOPICS } from '../../shared/kafka-topics';
 import {
-   TOPICS,
-   type FunctionExecutionRequest,
-   type AppResultMessage,
-} from '../../shared/kafka-topics';
+   ToolInvocationRequestedSchema,
+   type ToolInvocationRequested,
+   type ToolInvocationResulted,
+} from '../../shared/event-schemas';
 import type { Producer, Consumer } from 'kafkajs';
 
 // Open-Meteo API URLs
@@ -39,9 +42,10 @@ let producer: Producer;
 let consumer: Consumer;
 let isRunning = false;
 
-/**
- * Get weather description from WMO code (Hebrew)
- */
+// ============================================
+// Business Logic (preserved from original)
+// ============================================
+
 function getWeatherDescription(code: number): string {
    const descriptions: Record<number, string> = {
       0: 'שמיים בהירים',
@@ -67,12 +71,8 @@ function getWeatherDescription(code: number): string {
    return descriptions[code] || 'לא ידוע';
 }
 
-/**
- * Fetch weather for a city
- */
 async function getWeather(city: string): Promise<string> {
    try {
-      // Step 1: Get coordinates
       const geoResponse = await fetch(
          `${GEOCODING_API}?name=${encodeURIComponent(city)}&count=1`
       );
@@ -85,7 +85,6 @@ async function getWeather(city: string): Promise<string> {
       const location = geoData.results[0]!;
       const { latitude, longitude, name, country } = location;
 
-      // Step 2: Get weather
       const weatherResponse = await fetch(
          `${WEATHER_API}?latitude=${latitude}&longitude=${longitude}&current=temperature_2m,weather_code,wind_speed_10m`
       );
@@ -102,21 +101,78 @@ async function getWeather(city: string): Promise<string> {
    }
 }
 
-/**
- * Start the WeatherApp worker
- */
+// ============================================
+// Event Handler (new CQRS pattern)
+// ============================================
+
+async function handleToolInvocation(
+   event: ToolInvocationRequested
+): Promise<void> {
+   const { correlationId, payload } = event;
+   const { planId, stepIndex, toolInput } = payload;
+
+   console.log(
+      `📥 WeatherApp: Processing [${correlationId}] step=${stepIndex}`
+   );
+
+   const startTime = Date.now();
+   let resultText = '';
+   let success = true;
+   let errorMessage: string | undefined;
+
+   try {
+      const city = (toolInput as { city?: string }).city || '';
+      resultText = await getWeather(city);
+   } catch (error) {
+      success = false;
+      errorMessage = `WeatherApp error: ${error}`;
+      console.error(`❌ WeatherApp: ${errorMessage}`);
+   }
+
+   const durationMs = Date.now() - startTime;
+
+   const resultEvent: ToolInvocationResulted = {
+      eventType: 'ToolInvocationResulted',
+      correlationId,
+      timestamp: Date.now(),
+      payload: {
+         planId,
+         stepIndex,
+         toolName: 'weather',
+         result: resultText,
+         success,
+         durationMs,
+         ...(errorMessage && { errorMessage }),
+      },
+   };
+
+   await producer.send({
+      topic: ES_TOPICS.CONVERSATION_EVENTS,
+      messages: [{ key: correlationId, value: JSON.stringify(resultEvent) }],
+   });
+
+   console.log(
+      `📤 WeatherApp: Published ToolInvocationResulted [${correlationId}] ` +
+         `success=${success} duration=${durationMs}ms`
+   );
+}
+
+// ============================================
+// Service Lifecycle
+// ============================================
+
 async function start(): Promise<void> {
    if (isRunning) return;
 
-   console.log('🔌 WeatherApp: Starting...');
+   console.log('🔌 WeatherApp: Starting (CQRS mode)...');
 
    producer = createProducer();
-   consumer = createConsumer('weather-app-group');
+   consumer = createConsumer('weather-app-es-group');
 
    await producer.connect();
    await consumer.connect();
    await consumer.subscribe({
-      topic: TOPICS.ENRICHED_EXECUTION,
+      topic: ES_TOPICS.TOOL_INVOCATION_REQUESTS,
       fromBeginning: false,
    });
 
@@ -125,39 +181,21 @@ async function start(): Promise<void> {
          if (!message.value) return;
 
          try {
-            const execRequest: FunctionExecutionRequest = JSON.parse(
-               message.value.toString()
-            );
+            const parsed = JSON.parse(message.value.toString());
 
-            // Only process weather requests
-            if (execRequest.functionName !== 'weather') return;
+            if (parsed.payload?.toolName !== 'weather') return;
 
-            console.log(
-               `📥 WeatherApp: Processing [${execRequest.correlationId}]`
-            );
+            const validation = ToolInvocationRequestedSchema.safeParse(parsed);
+            if (!validation.success) {
+               console.error(
+                  'WeatherApp: Invalid event:',
+                  validation.error.format()
+               );
+               return;
+            }
 
-            // Get city from parameters
-            const city =
-               (execRequest.parameters as { city?: string }).city || '';
-            const response = await getWeather(city);
-
-            // Publish result
-            const result: AppResultMessage = {
-               correlationId: execRequest.correlationId,
-               timestamp: Date.now(),
-               source: 'weather',
-               prompt: city,
-               response,
-               sessionId: execRequest.sessionId,
-            };
-
-            await producer.send({
-               topic: TOPICS.APP_RESULTS,
-               messages: [{ value: JSON.stringify(result) }],
-            });
-
-            console.log(
-               `📤 WeatherApp: Published result [${execRequest.correlationId}]`
+            await handleToolInvocation(
+               validation.data as ToolInvocationRequested
             );
          } catch (error) {
             console.error('WeatherApp: Error processing message:', error);
@@ -166,12 +204,11 @@ async function start(): Promise<void> {
    });
 
    isRunning = true;
-   console.log('✅ WeatherApp: Running');
+   console.log(
+      '✅ WeatherApp: Running (CQRS — listening on tool-invocation-requests)'
+   );
 }
 
-/**
- * Stop the WeatherApp worker
- */
 async function stop(): Promise<void> {
    console.log('🔌 WeatherApp: Stopping...');
    await consumer?.disconnect();
@@ -182,7 +219,6 @@ async function stop(): Promise<void> {
 
 export const weatherApp = { start, stop };
 
-// Run as standalone
 if (import.meta.main) {
    start().catch(console.error);
    process.on('SIGINT', async () => {

@@ -1,15 +1,18 @@
 // ============================================
-// GeneralChatApp Worker
-// Handles general conversation with OpenAI
+// GeneralChatApp Worker (Event-Sourced CQRS)
+// Listens to: tool-invocation-requests (toolName="general_chat")
+// Produces to: conversation-events (ToolInvocationResulted)
+// Business logic preserved: Cynical Data Engineer persona via OpenAI
 // ============================================
 
 import { OpenAI } from 'openai';
 import { createProducer, createConsumer } from '../../shared/kafka-client';
+import { ES_TOPICS } from '../../shared/kafka-topics';
 import {
-   TOPICS,
-   type FunctionExecutionRequest,
-   type AppResultMessage,
-} from '../../shared/kafka-topics';
+   ToolInvocationRequestedSchema,
+   type ToolInvocationRequested,
+   type ToolInvocationResulted,
+} from '../../shared/event-schemas';
 import { CYNICAL_ENGINEER_PROMPT } from '../../shared/prompts';
 import type { Producer, Consumer } from 'kafkajs';
 
@@ -22,32 +25,19 @@ let producer: Producer;
 let consumer: Consumer;
 let isRunning = false;
 
-/**
- * Generate response using OpenAI with conversation history
- */
-async function generateResponse(
-   prompt: string,
-   history: Array<{ role: 'user' | 'assistant' | 'system'; content: string }>
-): Promise<string> {
-   try {
-      // Log history being used
-      console.log(
-         `📚 GeneralChatApp: Using ${history.length} history messages for context`
-      );
+// ============================================
+// Business Logic (preserved from original)
+// ============================================
 
-      // Build messages array with history
+async function generateResponse(prompt: string): Promise<string> {
+   try {
       const messages: Array<{
          role: 'user' | 'assistant' | 'system';
          content: string;
       }> = [
          { role: 'system', content: CYNICAL_ENGINEER_PROMPT },
-         ...history,
          { role: 'user', content: prompt },
       ];
-
-      console.log(
-         `📝 GeneralChatApp: Total messages in context: ${messages.length}`
-      );
 
       const response = await openai.chat.completions.create({
          model: 'gpt-4o-mini',
@@ -66,21 +56,78 @@ async function generateResponse(
    }
 }
 
-/**
- * Start the GeneralChatApp worker
- */
+// ============================================
+// Event Handler (new CQRS pattern)
+// ============================================
+
+async function handleToolInvocation(
+   event: ToolInvocationRequested
+): Promise<void> {
+   const { correlationId, payload } = event;
+   const { planId, stepIndex, toolInput } = payload;
+
+   console.log(
+      `📥 GeneralChatApp: Processing [${correlationId}] step=${stepIndex}`
+   );
+
+   const startTime = Date.now();
+   let resultText = '';
+   let success = true;
+   let errorMessage: string | undefined;
+
+   try {
+      const userMessage = (toolInput as { message?: string }).message || '';
+      resultText = await generateResponse(userMessage);
+   } catch (error) {
+      success = false;
+      errorMessage = `GeneralChatApp error: ${error}`;
+      console.error(`❌ GeneralChatApp: ${errorMessage}`);
+   }
+
+   const durationMs = Date.now() - startTime;
+
+   const resultEvent: ToolInvocationResulted = {
+      eventType: 'ToolInvocationResulted',
+      correlationId,
+      timestamp: Date.now(),
+      payload: {
+         planId,
+         stepIndex,
+         toolName: 'general_chat',
+         result: resultText,
+         success,
+         durationMs,
+         ...(errorMessage && { errorMessage }),
+      },
+   };
+
+   await producer.send({
+      topic: ES_TOPICS.CONVERSATION_EVENTS,
+      messages: [{ key: correlationId, value: JSON.stringify(resultEvent) }],
+   });
+
+   console.log(
+      `📤 GeneralChatApp: Published ToolInvocationResulted [${correlationId}] ` +
+         `success=${success} duration=${durationMs}ms`
+   );
+}
+
+// ============================================
+// Service Lifecycle
+// ============================================
+
 async function start(): Promise<void> {
    if (isRunning) return;
 
-   console.log('🔌 GeneralChatApp: Starting...');
+   console.log('🔌 GeneralChatApp: Starting (CQRS mode)...');
 
    producer = createProducer();
-   consumer = createConsumer('general-chat-app-group');
+   consumer = createConsumer('general-chat-es-group');
 
    await producer.connect();
    await consumer.connect();
    await consumer.subscribe({
-      topic: TOPICS.ENRICHED_EXECUTION,
+      topic: ES_TOPICS.TOOL_INVOCATION_REQUESTS,
       fromBeginning: false,
    });
 
@@ -89,44 +136,21 @@ async function start(): Promise<void> {
          if (!message.value) return;
 
          try {
-            const execRequest: FunctionExecutionRequest = JSON.parse(
-               message.value.toString()
-            );
+            const parsed = JSON.parse(message.value.toString());
 
-            // Only process general requests
-            if (execRequest.functionName !== 'general') return;
+            if (parsed.payload?.toolName !== 'general_chat') return;
 
-            console.log(
-               `📥 GeneralChatApp: Processing [${execRequest.correlationId}]`
-            );
+            const validation = ToolInvocationRequestedSchema.safeParse(parsed);
+            if (!validation.success) {
+               console.error(
+                  'GeneralChatApp: Invalid event:',
+                  validation.error.format()
+               );
+               return;
+            }
 
-            // Get message from parameters
-            const userMessage =
-               (execRequest.parameters as { message?: string }).message || '';
-
-            // Generate response with history
-            const response = await generateResponse(
-               userMessage,
-               execRequest.history || []
-            );
-
-            // Publish result
-            const result: AppResultMessage = {
-               correlationId: execRequest.correlationId,
-               timestamp: Date.now(),
-               source: 'general',
-               prompt: userMessage,
-               response,
-               sessionId: execRequest.sessionId,
-            };
-
-            await producer.send({
-               topic: TOPICS.APP_RESULTS,
-               messages: [{ value: JSON.stringify(result) }],
-            });
-
-            console.log(
-               `📤 GeneralChatApp: Published result [${execRequest.correlationId}]`
+            await handleToolInvocation(
+               validation.data as ToolInvocationRequested
             );
          } catch (error) {
             console.error('GeneralChatApp: Error processing message:', error);
@@ -135,12 +159,11 @@ async function start(): Promise<void> {
    });
 
    isRunning = true;
-   console.log('✅ GeneralChatApp: Running');
+   console.log(
+      '✅ GeneralChatApp: Running (CQRS — listening on tool-invocation-requests)'
+   );
 }
 
-/**
- * Stop the GeneralChatApp worker
- */
 async function stop(): Promise<void> {
    console.log('🔌 GeneralChatApp: Stopping...');
    await consumer?.disconnect();
@@ -151,7 +174,6 @@ async function stop(): Promise<void> {
 
 export const generalChatApp = { start, stop };
 
-// Run as standalone
 if (import.meta.main) {
    start().catch(console.error);
    process.on('SIGINT', async () => {
