@@ -14,4 +14,4 @@ concurrently([
       prefixColor: 'green',
    },
 ]);
-//ommand: ' bun run packages/server/index.ts ',
+//command: ' bun run packages/server/index.ts ',

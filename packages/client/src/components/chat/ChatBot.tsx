@@ -3,7 +3,7 @@ import { useRef, useState } from 'react';
 import TypingIndicator from './TypingIndicator';
 import type { Message } from './chatMessages';
 import ChatMessages from './chatMessages';
-import ChatInput, { type ChatFormData } from './chatInput';
+import ChatInput, { type ChatFormData } from './ChatInput';
 
 type ChatResponse = {
    // define chat response type

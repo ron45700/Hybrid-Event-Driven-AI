@@ -1,0 +1,9 @@
+{
+   "name": "aggregator",
+   "private": true,
+   "type": "module",
+   "main": "index.ts",
+   "scripts": {
+      "start": "bun run index.ts"
+   }
+}

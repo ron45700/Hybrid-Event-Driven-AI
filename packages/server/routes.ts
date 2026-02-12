@@ -1,6 +1,6 @@
 import express from 'express';
 import type { Request, Response } from 'express';
-import { chatController } from './controllers/chat.controller';
+import { kafkaChatController } from './controllers/kafka-chat.controller';
 
 const router = express.Router();
 
@@ -12,7 +12,7 @@ router.get('/api/hello', (req: Request, res: Response) => {
    res.json({ message: 'Hello World!' });
 });
 
-// Chat route
-router.post('/api/chat', chatController.sendMessage);
+// Chat route (via Kafka)
+router.post('/api/chat', kafkaChatController.handleChat);
 
 export default { router };

@@ -6,7 +6,8 @@
       "concurrently": "^9.2.1",
       "husky": "^9.1.7",
       "lint-staged": "^16.2.7",
-      "prettier": "^3.7.4"
+      "prettier": "^3.7.4",
+      "prisma": "5.22.0"
    },
    "peerDependencies": {
       "typescript": "^5"
@@ -15,13 +16,17 @@
    "scripts": {
       "dev": "bun run index.ts",
       "format": "prettier --write .",
-      "prepare": "husky"
+      "prepare": "husky",
+      "init-topics": "bun run packages/services/shared/init-topics.ts",
+      "start-services": "concurrently -n \"Client,Server,Router,Parser,Guardrail,Memory,Aggregator,Math,Weather,Exchange,General\" -c \"bgGreen.bold,bgBlue.bold,cyan,gray,bgRed.bold,magenta,yellow,green,blue,red,white\" \"bun run --cwd packages/client dev\" \"bun run --cwd packages/server dev\" \"bun run packages/services/router-service/routerService.ts\" \"bun run packages/services/parser-service/parserService.ts\" \"bun run packages/services/guardrail-service/guardrailService.ts\" \"bun run packages/services/memory-service/memoryService.ts\" \"bun run packages/services/aggregator/responseAggregator.ts\" \"bun run packages/services/workers/math-app/mathApp.ts\" \"bun run packages/services/workers/weather-app/weatherApp.ts\" \"bun run packages/services/workers/exchange-app/exchangeApp.ts\" \"bun run packages/services/workers/general-chat-app/generalChatApp.ts\""
    },
    "type": "module",
    "workspaces": [
       "packages/*"
    ],
    "dependencies": {
+      "@prisma/client": "5.22.0",
+      "kafkajs": "^2.2.4",
       "react-markdown": "^10.1.0",
       "zod": "3.24.1"
    }

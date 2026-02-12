@@ -2,184 +2,252 @@
 
 ## 1. Project Overview
 
-This project is a **web-based Chatbot Application** meant to serve as a "Digital Playground" learning aid. It features an interactive AI assistant specifically designed to be a friendly "Playground Guide" that helps users with self-study projects using playground metaphors (Sandbox, Slide, Swing Set, etc.).
+This project is a **distributed Chatbot Application** built with a microservices architecture using **Apache Kafka** for event-driven communication. The system transforms user messages into classified intents, routes them to specialized worker applications, and returns responses—all through asynchronous Kafka messaging.
 
-The application is structured as a **Monorepo** containing both the Frontend (Client) and Backend (Server).
+The application is structured as a **Monorepo** containing:
+
+- **Frontend** (React + Vite)
+- **Gateway Server** (Express)
+- **Kafka Microservices** (7 services)
 
 ## Quick Start
 
-To start the project immediately (after installing dependencies and setting environment variables):
-
 ```bash
-bun run dev
+# 1. Start Kafka
+docker-compose up -d
+
+# 2. Initialize Kafka topics (first time only)
+bun run init-topics
+
+# 3. Start all services (Client, Server, and 7 Microservices)
+bun run start-services
 ```
+
+Access the app at **http://localhost:5173**
+
+---
 
 ## 2. Architecture and Structure
 
+### System Architecture
+
+```
+┌──────────┐     ┌───────────────┐     ┌───────────────┐
+│  React   │ ──▶ │ Express Server│ ──▶ │ RouterService │
+│  Client  │     │ (Gateway)     │     │ (Classify)    │
+└──────────┘     └───────────────┘     └───────┬───────┘
+      ▲                 ▲                      │
+      │                 │              user-input-events
+      │                 │                      │
+      │                 │                      ▼
+      │                 │            ┌─────────────────┐
+      │                 │            │  MemoryService  │
+      │                 │            │ (History/State) │
+      │                 │            └────────┬────────┘
+      │                 │                     │
+      │                 │          router-intents-enriched
+      │                 │                     │
+      │                 │    ┌────────────────┼────────────────┐
+      │                 │    ▼                ▼                ▼
+      │                 │  ┌────────┐  ┌────────────┐  ┌─────────────┐
+      │                 │  │Workers │  │ WeatherApp │  │GeneralChat  │
+      │                 │  │Math/Ex │  │            │  │App (OpenAI) │
+      │                 │  └───┬────┘  └─────┬──────┘  └──────┬──────┘
+      │                 │      └─────────────┼────────────────┘
+      │                 │                    ▼
+      │                 │              app-results
+      │                 │                    │
+      │    bot-responses│◀───────────────────┘
+      │                 │            ┌────────────┐
+      └─────────────────┘◀───────────│ Aggregator │
+                                     └────────────┘
+```
+
 ### Directory Structure
-
-The project uses a workspace-based monorepo structure managed by **Bun** (or npm).
-
-#### Visual Directory Structure
 
 ```text
 my-app/
 ├── packages/
-│   ├── client/           # Frontend Application (React + Vite)
-│   │   ├── src/
-│   │   │   ├── components/
-│   │   │   │   ├── chat/
-│   │   │   │   │   ├── ChatBot.tsx
-│   │   │   │   │   ├── ChatInput.tsx
-│   │   │   │   │   ├── TypingIndicator.tsx
-│   │   │   │   │   └── chatMessages.tsx
-│   │   │   │   └── ui/
-│   │   │   │       └── button.tsx
-│   │   │   ├── public/
-│   │   │   └── ...
-│   └── server/           # Backend Application (Express)
-│       ├── controllers/
-│       │   └── chat.controller.ts
-│       ├── services/
-│       │   └── chat.service.ts
-│       ├── repositories/
-│       ├── prompts/      # AI personas and system prompts
-│       └── index.ts
-├── index.ts              # Root entry point (concurrent runner)
-├── package.json          # Workspace configuration
-└── ...
+│   ├── client/                    # React Frontend (Vite + Tailwind)
+│   │   └── src/components/chat/   # Chat UI components
+│   │
+│   ├── server/                    # Express Gateway Server
+│   │   ├── controllers/
+│   │   │   └── kafka-chat.controller.ts
+│   │   ├── data/
+│   │   │   └── history.json       # Conversation persistence
+│   │   └── index.ts               # Server entry point
+│   │
+│   └── services/                  # Kafka Microservices
+│       ├── shared/                # Shared utilities
+│       │   ├── kafka-client.ts    # Kafka connection singleton
+│       │   ├── kafka-topics.ts    # Topic constants & types
+│       │   └── init-topics.ts     # Topic initialization script
+│       │
+│       ├── user-interface/        # Kafka ↔ Express bridge
+│       ├── router-service/        # Intent classification (OpenAI)
+│       ├── memory-service/        # History management
+│       ├── aggregator/            # Response aggregation
+│       │
+│       └── workers/               # Specialized handlers
+│           ├── math-app/          # Math calculations
+│           ├── weather-app/       # Weather API (Open-Meteo)
+│           ├── exchange-app/      # Currency rates
+│           └── general-chat-app/  # OpenAI conversation
+│
+├── docker-compose.yml             # Kafka (Confluent) configuration
+└── package.json                   # Workspace & scripts
 ```
 
-- **`packages/client`**: The frontend application.
-- **`packages/server`**: The backend API server.
-- **`prompts`** (within server): Contains the system prompts and personas for the AI.
+---
 
-### Key Components
+## 3. Kafka Topics
 
-- **Client (Frontend)**:
-   - Built with **React 19**, **Vite**, and **Tailwind CSS 4**.
-   - Handles user input and displays chat history.
-   - Uses **Axios** for API requests.
-   - Configured to proxy `/api` requests to the backend server.
-- **Server (Backend)**:
-   - Built with **Express.js** and **TypeScript**.
-   - Integrates with **OpenAI** API to generate responses.
-   - Validator: **Zod** is used for request validation.
-   - Repository: Uses an in-memory repository to track conversation states.
+| Topic                     | Producer      | Consumer                  | Purpose                      |
+| ------------------------- | ------------- | ------------------------- | ---------------------------- |
+| `user-input-events`       | UserInterface | RouterService             | User messages from UI        |
+| `router-intents`          | RouterService | MemoryService             | Classified intents           |
+| `router-intents-enriched` | MemoryService | All Workers               | Intents with history context |
+| `app-results`             | All Workers   | MemoryService, Aggregator | Worker responses             |
+| `bot-responses`           | Aggregator    | UserInterface             | Final responses to UI        |
+| `user-control-events`     | UserInterface | MemoryService             | Control commands (reset)     |
 
-### Technology Stack
+---
 
-- **Runtime/Package Manager**: Bun (recommended) / Node.js
-- **Frontend**: React, Vite, Tailwind CSS, Lucide React (icons).
-- **Backend**: Express, OpenAI SDK.
-- **Language**: TypeScript.
+## 4. Microservices
 
-## 3. Core Functionality & Flow
+### UserInterface Service
 
-### Execution Flow (Chat Interaction)
+- **Location**: `packages/services/user-interface/`
+- **Purpose**: Bridges Express API with Kafka messaging
+- **Produces to**: `user-input-events`, `user-control-events`
+- **Consumes from**: `bot-responses`
+- **Key Feature**: Correlation ID tracking for request/response matching
 
-1. **User Input**: The user types a message in the chat interface (Frontend).
-2. **Request**: The Client sends a `POST` request to `/api/chat` with:
-   - `prompt`: The user's message.
-   - `conversationId`: A generic UUID generated by the client to track the session.
-3. **Proxy**: The Vite development server proxies this request to `http://localhost:3000/api/chat`.
-4. **Validation**: The Server receives the request and validates the body using **Zod** (ensures `prompt` exists and `conversationId` is a UUID).
-5. **Processing**:
-   - The `chatService` constructs a system instruction based on `Digital_Playground_System_Prompt.md`, defining the AI's persona.
-   - It calls the OpenAI API, passing the current prompt and the `previous_response_id` (retrieved from the repository) to maintain conversation continuity.
-6. **Persistence**: The new `response_id` from OpenAI is saved in the in-memory `conversationRepository` mapped to the `conversationId`.
-7. **Response**: The server returns the AI's generated textual response to the Client.
-8. **Display**: The Client appends the new message to the chat history and displays it.
+### RouterService
 
-## 4. API Endpoints
+- **Location**: `packages/services/router-service/`
+- **Purpose**: Classifies user intent using OpenAI
+- **Produces to**: `router-intents`
+- **Consumes from**: `user-input-events`
+- **Intent Types**: `weather`, `math`, `currency`, `general`
 
-The backend exposes the following RESTful endpoints.
+### MemoryService
 
-### 1. Health/Test Endpoint
+- **Location**: `packages/services/memory-service/`
+- **Purpose**: Manages conversation history
+- **Storage**: `packages/server/data/history.json` (Bun File API)
+- **Features**:
+   - Enriches intents with conversation history
+   - Persists messages after each response
+   - Handles reset commands
 
-- **Method**: `GET`
-- **Path**: `/api/hello`
-- **Purpose**: Simple health check to verify the API is reachable.
-- **Response**:
-   ```json
-   {
-      "message": "Hello World!"
-   }
-   ```
+### Aggregator
 
-### 2. Chat Endpoint
+- **Location**: `packages/services/aggregator/`
+- **Purpose**: Collects worker results and publishes final responses
+- **Produces to**: `bot-responses`
+- **Consumes from**: `app-results`
+
+### Worker Apps
+
+| Worker             | Intent     | Logic                            |
+| ------------------ | ---------- | -------------------------------- |
+| **MathApp**        | `math`     | Safe expression evaluation       |
+| **WeatherApp**     | `weather`  | Open-Meteo API integration       |
+| **ExchangeApp**    | `currency` | Static USD exchange rates        |
+| **GeneralChatApp** | `general`  | OpenAI with conversation history |
+
+---
+
+## 5. API Endpoints
+
+### Chat Endpoint
 
 - **Method**: `POST`
 - **Path**: `/api/chat`
-- **Purpose**: Sends a user message to the AI and retrieves a response.
-- **Request Body** (JSON):
+- **Request**:
    ```json
    {
-      "prompt": "Hello, how does the slide work?",
+      "prompt": "מה מזג האוויר בתל אביב?",
       "conversationId": "123e4567-e89b-12d3-a456-426614174000"
    }
    ```
-
-   - `prompt` (string, required): 1-1000 characters.
-   - `conversationId` (string, UUID, required): Unique identifier for the chat session.
-- **Response** (JSON):
+- **Response**:
    ```json
    {
-      "message": "The Slide is like a data pipeline..."
+      "id": "msg_1234567890_abc",
+      "message": "מזג האוויר ב-Tel Aviv: 22°C, שמיים בהירים"
    }
    ```
-- **Error Responses**:
-   - `400 Bad Request`: If validation fails (e.g., missing prompt).
-   - `500 Internal Server Error`: If the OpenAI API call fails.
 
-## 5. Database Schema
+### Reset Endpoint
 
-Currently, the project **does not use a persistent database**.
+- **Method**: `DELETE`
+- **Path**: `/api/chat/reset`
+- **Purpose**: Clears conversation history
 
-- **Repository**: `packages/server/repositories/conversation.repository.ts`
-- **Storage**: In-memory `Map<string, string>`.
-- **Schema**:
-   - **Key**: `conversationId` (string/UUID)
-   - **Value**: `lastResponseId` (string, ID from OpenAI)
-- **Note**: Since storage is in-memory, all conversation history context is lost if the server is restarted.
+---
 
-## 6. Configuration and Setup Notes
+## 6. Technology Stack
 
-### Prerequisites
+| Component   | Technology                     |
+| ----------- | ------------------------------ |
+| Runtime     | Bun                            |
+| Language    | TypeScript                     |
+| Frontend    | React 19, Vite, Tailwind CSS 4 |
+| Gateway     | Express.js                     |
+| Messaging   | Apache Kafka (kafkajs)         |
+| AI          | OpenAI API (gpt-4o-mini)       |
+| Weather API | Open-Meteo                     |
+| Validation  | Zod                            |
+| Container   | Docker (Confluent Kafka)       |
 
-- **Bun** (recommended) or **Node.js** installed.
-- **OpenAI API Key**.
+---
 
-### Setup Instructions
+## 7. Configuration
 
-1. **Install Dependencies**:
-   Run the following command from the root directory:
+### Environment Variables
 
-   ```bash
-   bun install
-   # or
-   npm install
-   ```
+Create `.env` in `packages/server/`:
 
-2. **Environment Variables**:
-   You must configure the backend environment variables.
-   - Navigate to `packages/server`.
-   - Create a `.env` file (copy from `.env.example` if it exists).
-   - Add your OpenAI API key and (optional) port:
-      ```env
-      OPENAI_API_KEY=sk-your-api-key-here
-      PORT=3000
-      ```
+```env
+OPENAI_API_KEY=sk-your-api-key
+PORT=3000
+KAFKA_BROKERS=localhost:9092
+```
 
-3. **Run Locally**:
-   From the **root** directory, run the development script. This uses `concurrently` to start both the client and server.
+### Docker (Kafka)
 
-   ```bash
-   bun run dev
-   # or
-   npm run dev
-   ```
+Start Kafka:
 
-4. **Access the App**:
-   - Frontend: `http://localhost:5173` (default Vite port).
-   - Backend: `http://localhost:3000`.
+```bash
+docker-compose up -d
+```
+
+---
+
+## 8. NPM Scripts
+
+| Script       | Command                  | Description                            |
+| ------------ | ------------------------ | -------------------------------------- |
+| Start All    | `bun run start-services` | Runs Client + Server + 7 Microservices |
+| Init Topics  | `bun run init-topics`    | Creates all Kafka topics               |
+| Dev (legacy) | `bun run dev`            | Runs Client + Server only              |
+
+---
+
+## 9. Message Flow Example
+
+When a user asks "כמה זה 5+5?":
+
+1. **Client** → POST `/api/chat` → **Gateway**
+2. **Gateway** → `user-input-events` → **RouterService**
+3. **RouterService** classifies as `math` → `router-intents`
+4. **MemoryService** enriches → `router-intents-enriched`
+5. **MathApp** calculates `5+5=10` → `app-results`
+6. **MemoryService** saves to history
+7. **Aggregator** → `bot-responses`
+8. **Gateway** receives via correlation ID → **Client**
+
+Total latency: ~200-500ms

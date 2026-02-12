@@ -1,0 +1,50 @@
+[
+   {
+      "role": "user",
+      "content": "מה המזג האוויר למחר בכפר סבא?"
+   },
+   {
+      "role": "assistant",
+      "content": "מזג האוויר ב-Kfar Saba, Israel: 11.6°C, מעונן חלקית, רוח: 5.2 קמ\"ש"
+   },
+   {
+      "role": "user",
+      "content": "London"
+   },
+   {
+      "role": "assistant",
+      "content": "מזג האוויר ב-London, United Kingdom: 7.6°C, מעונן, רוח: 7.4 קמ\"ש"
+   },
+   {
+      "role": "user",
+      "content": "10-2"
+   },
+   {
+      "role": "assistant",
+      "content": "10-2 = 8"
+   },
+   {
+      "role": "user",
+      "content": "במי כדאי לבחור בבחירות ?"
+   },
+   {
+      "role": "assistant",
+      "content": "Well, if only choosing a candidate were as easy as fixing a data pipeline. Just like you wouldn't pick a schema without checking for mismatches, make sure you know their track record and data quality. But hey, it’s your vote, not a poorly designed ETL process. Good luck!"
+   },
+   {
+      "role": "user",
+      "content": "ספר לי בדיחה"
+   },
+   {
+      "role": "assistant",
+      "content": "Fine, how about this: Why did the data engineer break up with the null value? Because it just couldn’t commit! Just like those late-night batch jobs that promise results but leave you with empty datasets. Classic."
+   },
+   {
+      "role": "user",
+      "content": "היי"
+   },
+   {
+      "role": "assistant",
+      "content": "Look, hey. What's up? Hopefully not another poorly documented API or a data pipeline full of null values. Let’s keep it efficient."
+   }
+]

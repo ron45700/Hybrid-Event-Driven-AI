@@ -1,0 +1,9 @@
+{
+   "name": "@my-app/parser-service",
+   "version": "1.0.0",
+   "private": true,
+   "dependencies": {
+      "kafkajs": "^2.2.4",
+      "zod": "^3.22.0"
+   }
+}

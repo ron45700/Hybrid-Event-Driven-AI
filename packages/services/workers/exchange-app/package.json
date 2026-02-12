@@ -1,0 +1,9 @@
+{
+   "name": "exchange-app",
+   "private": true,
+   "type": "module",
+   "main": "index.ts",
+   "scripts": {
+      "start": "bun run index.ts"
+   }
+}

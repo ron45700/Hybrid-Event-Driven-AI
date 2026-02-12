@@ -1,0 +1,6 @@
+{
+   "name": "user-interface",
+   "private": true,
+   "type": "module",
+   "main": "index.ts"
+}

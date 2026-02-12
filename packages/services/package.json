@@ -1,0 +1,15 @@
+{
+   "name": "services",
+   "private": true,
+   "type": "module",
+   "scripts": {
+      "init-topics": "bun run shared/init-topics.ts",
+      "router": "bun run router-service/routerService.ts",
+      "memory": "bun run memory-service/memoryService.ts",
+      "aggregator": "bun run aggregator/responseAggregator.ts",
+      "math": "bun run workers/math-app/mathApp.ts",
+      "weather": "bun run workers/weather-app/weatherApp.ts",
+      "exchange": "bun run workers/exchange-app/exchangeApp.ts",
+      "general": "bun run workers/general-chat-app/generalChatApp.ts"
+   }
+}
