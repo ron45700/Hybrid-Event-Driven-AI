@@ -16,7 +16,8 @@ import type { Producer, Consumer } from 'kafkajs';
 // ============================================
 // Configuration
 // ============================================
-const TEST_QUERY = 'I need a laptop for gaming under $2000';
+const TEST_QUERY =
+   "What's the weather in Tokyo, calculate 100 divided by 3, and say hello to me in Japanese.";
 const CORRELATION_ID = crypto.randomUUID();
 const CONVERSATION_ID = crypto.randomUUID();
 const TIMEOUT_MS = 60_000; // 60 seconds max wait
