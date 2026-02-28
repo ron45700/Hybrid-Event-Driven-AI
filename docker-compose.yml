@@ -40,10 +40,21 @@ services:
       context: ./packages/services/workers/rag-worker
       dockerfile: Dockerfile
     environment:
+      # Kafka broker address — uses the Docker-internal listener
       KAFKA_BROKERS: kafka:29092
+      # ChromaDB within the Docker network
       CHROMA_HOST: chromadb
       CHROMA_PORT: 8000
+      # Directory where main.py reads .txt product files.
+      # Mapped from the host via the volume below.
+      PRODUCTS_DATA_DIR: /app/data/products
+      # Set to "true" to force a full re-ingest on startup
+      # (e.g. after editing laptops.txt on the host).
+      FORCE_REINGEST: "false"
     volumes:
+      # Mount host data directory read-only into the container.
+      # Changes to laptops.txt on the host are visible immediately
+      # without needing to rebuild the image.
       - ./data/products:/app/data/products:ro
     depends_on:
       - kafka
