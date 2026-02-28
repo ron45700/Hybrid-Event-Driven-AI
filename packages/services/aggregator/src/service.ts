@@ -196,6 +196,7 @@ async function routeEvent(raw: string): Promise<void> {
       case 'ToolInvocationResulted':
       case 'PlanCompleted':
       case 'FinalAnswerSynthesized':
+      case 'QueryBlocked': // Guardrail rejection — UI already notified directly
          break;
       default:
          break;

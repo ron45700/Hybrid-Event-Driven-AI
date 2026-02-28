@@ -215,11 +215,14 @@ async function start(): Promise<void> {
    await producer.connect();
    await consumer.connect();
    await consumer.subscribe({
-      topic: ES_TOPICS.USER_COMMANDS,
+      topic: ES_TOPICS.CONVERSATION_EVENTS,
       fromBeginning: false,
    });
 
-   // Process incoming UserQueryReceived events
+   // Process incoming UserQueryReceived events.
+   // Note: We now consume from conversation-events (not user-commands).
+   // The Guardrail Service is the gate — it validates and forwards
+   // safe UserQueryReceived events here, and blocks unsafe ones.
    await consumer.run({
       eachMessage: async ({ message }) => {
          if (!message.value) return;
@@ -233,6 +236,11 @@ async function start(): Promise<void> {
             console.error('RouterAgent: Received non-JSON message, skipping');
             return;
          }
+
+         // Only act on UserQueryReceived — silently ignore all other event types
+         // (PlanGenerated, ToolInvocationResulted, PlanCompleted, QueryBlocked, etc.)
+         const eventType = (parsed as Record<string, unknown>)?.eventType;
+         if (eventType !== 'UserQueryReceived') return;
 
          // Validate incoming event
          const incomingValidation = UserQueryReceivedSchema.safeParse(parsed);

@@ -174,6 +174,24 @@ export type FinalAnswerSynthesized = z.infer<
 >;
 
 // ============================================
+// 8. QueryBlocked
+// Produced by: Guardrail → conversation-events
+// Consumed by: Aggregator (to send rejection to UI)
+// Signals that a user query was rejected before reaching the Router.
+// ============================================
+
+export const QueryBlockedSchema = BaseEventSchema.extend({
+   eventType: z.literal('QueryBlocked'),
+   payload: z.object({
+      conversationId: z.string().uuid(),
+      originalQuery: z.string(),
+      violationType: z.enum(['politics', 'malware', 'inappropriate']),
+      reason: z.string(),
+   }),
+});
+export type QueryBlocked = z.infer<typeof QueryBlockedSchema>;
+
+// ============================================
 // Discriminated Union: ConversationEvent
 // Validates ANY event on the `conversation-events` topic
 // ============================================
@@ -185,6 +203,7 @@ export const ConversationEventSchema = z.discriminatedUnion('eventType', [
    PlanCompletedSchema,
    SynthesizeFinalAnswerRequestedSchema,
    FinalAnswerSynthesizedSchema,
+   QueryBlockedSchema,
 ]);
 export type ConversationEvent = z.infer<typeof ConversationEventSchema>;
 

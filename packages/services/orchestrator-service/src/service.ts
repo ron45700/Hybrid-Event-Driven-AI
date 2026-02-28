@@ -271,6 +271,7 @@ async function routeEvent(raw: string): Promise<void> {
       case 'PlanCompleted':
       case 'SynthesizeFinalAnswerRequested':
       case 'FinalAnswerSynthesized':
+      case 'QueryBlocked': // Guardrail blocked this query — no plan to execute
          break;
       default:
          // Unknown event type — log and skip
