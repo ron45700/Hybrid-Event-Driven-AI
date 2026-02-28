@@ -23,7 +23,7 @@ Requests to calculate, compute, or solve mathematical problems.
 ### 3. currency
 Questions about exchange rates, currency values, or conversions.
 - Extract the target currency in ISO 3-letter format.
-- Hebrew mappings: "שקל"→"ILS", "דולר"→"USD", "אירו"→"EUR"
+- Hebrew mappings: "שקל"→"ILS", "דולר"→"USD", "אירו"→"EUR", "פאונד"→"GBP"
 
 ### 4. general
 Everything else: jokes, facts, opinions, conversation, unknown requests.
@@ -53,6 +53,10 @@ User: "מה דעתך על בינה מלאכותית?"
 
 User: "כמה עולה טיסה לניו יורק?"
 {"type":"general","parameters":{"message":"כמה עולה טיסה לניו יורק?"},"confidence":0.80}
+
+User: "כמה שווה הליש"ט היום?"
+{"type":"currency","parameters":{"currency":"GBP"},"confidence":0.95}
+
 
 ---
 

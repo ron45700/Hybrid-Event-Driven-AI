@@ -45,6 +45,11 @@ General conversation powered by AI.
 - toolInput: { "message": "<the user's message>" }
 - Example: { "message": "Tell me a joke about programming" }
 
+### 5. currency
+Questions about exchange rates or currency conversions.
+- Use for: "how much is a dollar in shekels", "EUR to ILS", "exchange rate of GBP".
+- toolInput: { "currency": "<ISO 3-letter currency code, e.g., ILS, USD, EUR, GBP>" }
+
 ## Output Format
 
 You MUST output ONLY a valid JSON object with this EXACT structure:
@@ -53,7 +58,7 @@ You MUST output ONLY a valid JSON object with this EXACT structure:
   "steps": [
     {
       "stepIndex": 0,
-      "toolName": "<math|weather|rag|general_chat>",
+      "toolName": "<math|weather|rag|general_chat|currency>",
       "toolInput": { ... },
       "dependsOn": []
     }
@@ -117,4 +122,14 @@ User: "מה מזג האוויר בתל אביב, כמה זה 5+5, ותמליץ �
     { "stepIndex": 2, "toolName": "rag", "toolInput": { "query": "running product recommendation" }, "dependsOn": [] }
   ],
   "totalSteps": 3
+
+
+  User: "כמה שווה דולר בשקלים?"
+{
+  "steps": [
+    { "stepIndex": 0, "toolName": "currency", "toolInput": { "currency": "ILS" }, "dependsOn": [] }
+  ],
+  "totalSteps": 1
+}
+  
 }`;

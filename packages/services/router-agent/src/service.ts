@@ -127,6 +127,7 @@ async function generatePlan(event: UserQueryReceived): Promise<PlanGenerated> {
                toolName: step.toolName as
                   | 'math'
                   | 'weather'
+                  | 'currency'
                   | 'rag'
                   | 'general_chat',
                toolInput: step.toolInput,
