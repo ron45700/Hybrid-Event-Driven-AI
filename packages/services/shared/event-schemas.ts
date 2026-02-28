@@ -43,7 +43,7 @@ export type UserQueryReceived = z.infer<typeof UserQueryReceivedSchema>;
 
 const PlanStepSchema = z.object({
    stepIndex: z.number().int().min(0),
-   toolName: z.enum(['math', 'weather', 'rag', 'general_chat']),
+   toolName: z.enum(['math', 'weather', 'rag', 'general_chat', 'currency']),
    toolInput: z.record(z.string(), z.unknown()),
    /** Indices of steps this step depends on (for future DAG support) */
    dependsOn: z.array(z.number().int().min(0)).default([]),
@@ -75,7 +75,7 @@ export const ToolInvocationRequestedSchema = BaseEventSchema.extend({
    payload: z.object({
       planId: z.string().min(1),
       stepIndex: z.number().int().min(0),
-      toolName: z.enum(['math', 'weather', 'rag', 'general_chat']),
+      toolName: z.enum(['math', 'weather', 'rag', 'general_chat', 'currency']),
       toolInput: z.record(z.string(), z.unknown()),
       conversationId: z.string().uuid(),
    }),
@@ -95,7 +95,7 @@ export const ToolInvocationResultedSchema = BaseEventSchema.extend({
    payload: z.object({
       planId: z.string().min(1),
       stepIndex: z.number().int().min(0),
-      toolName: z.enum(['math', 'weather', 'rag', 'general_chat']),
+      toolName: z.enum(['math', 'weather', 'rag', 'general_chat', 'currency']),
       result: z.string(),
       success: z.boolean(),
       errorMessage: z.string().optional(),
