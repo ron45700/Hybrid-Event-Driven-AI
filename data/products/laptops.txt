@@ -4,54 +4,142 @@ Product Category: Laptops
 
 Product: TechPro UltraBook X15
 Price: $1,299
-Description: Ultra-thin 15.6-inch laptop with Intel Core i7-13700H processor, 16GB DDR5 RAM, 512GB NVMe SSD, and a stunning 2.8K OLED display. Weighs only 1.5kg with up to 12 hours battery life. Perfect for professionals who need power on the go.
-Features: Thunderbolt 4, Wi-Fi 6E, Fingerprint reader, Backlit keyboard, Windows 11 Pro
 Rating: 4.7/5
+Purpose: Programming
+Description: Ultra-thin 15.6-inch laptop with Intel Core i7-13700H processor, 16GB DDR5 RAM, 512GB NVMe SSD, and a stunning 2.8K OLED display. Weighs only 1.5kg with up to 12 hours battery life. Perfect for developers and professionals who need power on the go.
+Features: Thunderbolt 4, Wi-Fi 6E, Fingerprint reader, Backlit keyboard, Windows 11 Pro
 
 ---
 
 Product: GameForce Titan RTX
 Price: $2,199
+Rating: 4.8/5
+Purpose: Gaming
 Description: High-performance gaming laptop featuring NVIDIA RTX 4070 graphics, AMD Ryzen 9 7945HX processor, 32GB DDR5 RAM, 1TB NVMe SSD. 17.3-inch QHD 240Hz display with G-Sync. Advanced cooling system with liquid metal thermal compound.
 Features: RGB per-key keyboard, 2.5Gbps Ethernet, Wi-Fi 6E, Thunderbolt 4, 4-zone speaker system
-Rating: 4.8/5
 
 ---
 
 Product: StudentBook Lite 14
 Price: $499
+Rating: 4.3/5
+Purpose: Student
 Description: Affordable 14-inch laptop designed for students. Intel Core i5-1335U processor, 8GB DDR4 RAM, 256GB SSD. Lightweight at 1.3kg with a durable plastic chassis. 10-hour battery life keeps you going through the school day.
 Features: HD webcam, USB-C charging, microSD slot, Windows 11 Home, Free 1-year Microsoft 365
-Rating: 4.3/5
 
 ---
 
 Product: CreatorStation Pro 16
 Price: $2,499
+Rating: 4.9/5
+Purpose: Creative
 Description: Professional content creation laptop with Apple M3 Max chip, 36GB unified memory, 1TB SSD. 16.2-inch Liquid Retina XDR display with ProMotion 120Hz. Ideal for video editing, 3D rendering, and music production.
 Features: HDMI 2.1, SDXC card slot, MagSafe charging, 22-hour battery life, Six-speaker sound system
-Rating: 4.9/5
 
 ---
 
 Product: BizBook Enterprise 13
 Price: $899
+Rating: 4.5/5
+Purpose: Business
 Description: Business-class 13.3-inch laptop built for enterprise environments. Intel vPro with Core i5-1345U, 16GB DDR5 RAM, 256GB SSD. MIL-STD-810H durability certified. Features comprehensive security with TPM 2.0 and Smart Card reader.
 Features: 4G LTE option, Spill-resistant keyboard, Anti-glare display, Windows 11 Pro, 3-year warranty
-Rating: 4.5/5
 
 ---
 
 Product: TabletBook Flex 2-in-1
 Price: $749
+Rating: 4.4/5
+Purpose: Student
 Description: Versatile 2-in-1 convertible with 13.3-inch touchscreen, Intel Core i5-1340P, 8GB RAM, 512GB SSD. 360-degree hinge lets you use it as a laptop, tablet, or tent mode. Includes active stylus for note-taking and drawing.
 Features: Active pen support, Tent mode, Tablet mode, Windows 11 Home, Gorilla Glass display
-Rating: 4.4/5
 
 ---
 
 Product: BudgetPC Essential 15
 Price: $329
+Rating: 3.9/5
+Purpose: Student
 Description: Entry-level 15.6-inch laptop for basic computing needs. Intel Celeron N4500, 4GB RAM, 128GB eMMC storage. Full HD display with anti-glare coating. Ideal for web browsing, email, and light document work.
 Features: USB 3.0, HDMI output, 8-hour battery, Lightweight at 1.7kg, Chrome OS option available
-Rating: 3.9/5
+
+---
+
+Product: DevStation Pro X1
+Price: $1,799
+Rating: 4.8/5
+Purpose: Programming
+Description: Developer-first laptop featuring AMD Ryzen 9 7940HS, 32GB DDR5 RAM, 1TB NVMe SSD, and a 14-inch 2.8K OLED 120Hz display. Exceptional Linux compatibility, dual-boot ready. Ships with pre-configured developer tools and native Docker support.
+Features: 3x USB-C Thunderbolt 4, Full-size SD card reader, Dual-band Wi-Fi 6E, Precision trackpad, 80Wh battery
+
+---
+
+Product: AlphaGamer X900
+Price: $1,599
+Rating: 4.6/5
+Purpose: Gaming
+Description: Mid-range gaming powerhouse with NVIDIA RTX 4060 graphics, Intel Core i7-13700H, 16GB DDR5 RAM, 512GB SSD. 15.6-inch FHD 165Hz IPS display with excellent color accuracy. Compact chassis compared to most gaming laptops.
+Features: Per-key RGB backlit keyboard, Wi-Fi 6E, Thunderbolt 4, 4-speaker sound, HDMI 2.1
+
+---
+
+Product: NomadBook Air Pro
+Price: $1,099
+Rating: 4.6/5
+Purpose: Business
+Description: Ultra-portable business laptop at just 1.1kg. Intel Core i7-1360P, 16GB LPDDR5 RAM, 512GB SSD, 13.5-inch 3:2 aspect ratio display perfect for reading and writing documents. Up to 16 hours real-world battery life. Ideal for frequent travelers.
+Features: Backlit ErgoSense keyboard, IR webcam + Windows Hello, fingerprint reader, LTE-ready, Wi-Fi 6E
+
+---
+
+Product: CodeMaster Z14
+Price: $1,399
+Rating: 4.7/5
+Purpose: Programming
+Description: Built for software engineers with AMD Ryzen 7 7840U, 32GB DDR5 RAM, 512GB NVMe SSD, and a stunning 14-inch 2.8K OLED display. Ships with Ubuntu pre-installed. Exceptional keyboard with 1.5mm travel, loved by developers for long coding sessions.
+Features: Dual USB-C Thunderbolt 4, USB-A 3.2, MicroSD slot, fingerprint reader, 75Wh battery
+
+---
+
+Product: PixelCraft Studio 15
+Price: $1,999
+Rating: 4.8/5
+Purpose: Creative
+Description: Designed for graphic designers and digital artists. NVIDIA RTX 4070 GPU, Intel Core i9-13900H, 32GB DDR5 RAM, 1TB SSD. 15.6-inch OLED touch display with 100% DCI-P3, factory color-calibrated. Includes active stylus and Wacom driver support.
+Features: HDMI 2.1, Thunderbolt 4, SD card reader, USB-A, Tactile keyboard, 99.9Wh battery
+
+---
+
+Product: EduBook Plus 11
+Price: $279
+Rating: 4.1/5
+Purpose: Student
+Description: Rugged and affordable Chromebook for K-12 students. MediaTek MT8186, 4GB RAM, 64GB eMMC. Military-grade drop resistance (MIL-STD-810H) and spill-resistant keyboard. Instant-on Chrome OS with Google Classroom integration. 12-hour battery.
+Features: 11.6-inch IPS display, USB-C charging, USB-A, microSD, HD webcam, anti-glare display
+
+---
+
+Product: ProBook Ultra G9
+Price: $1,249
+Rating: 4.5/5
+Purpose: Business
+Description: Premium enterprise laptop with Intel Core i7-1260P, 16GB DDR5 RAM, 512GB SSD, and a 14-inch Sure View Reflect privacy screen. HP Wolf Security built-in with BIOS-level protection. Strong docking station ecosystem for office productivity.
+Features: Sure View privacy display, Smart Card reader, 4G LTE, Spill-proof keyboard, HP Wolf Security, Windows 11 Pro
+
+---
+
+Product: BlazeBook Extreme 17
+Price: $2,799
+Rating: 4.7/5
+Purpose: Gaming
+Description: Flagship gaming laptop with NVIDIA RTX 4090 Laptop GPU, Intel Core i9-13980HX, 64GB DDR5 RAM, 2TB NVMe SSD. 17.3-inch Mini LED display at 240Hz with 1000 nits brightness. Extreme performance for AAA titles and game streaming.
+Features: Advanced MUX switch, per-key Cherry MX mechanical keyboard, Thunderbolt 4, 2.5GbE LAN, 99.9Wh battery
+
+---
+
+Product: SlimDesk Convertible Pro
+Price: $649
+Rating: 4.2/5
+Purpose: General
+Description: Well-rounded everyday laptop for home users. Intel Core i5-1235U, 8GB RAM, 256GB SSD, 15.6-inch Full HD IPS display. Not specialized, but a solid all-rounder for web browsing, streaming, office work, and light media editing.
+Features: Backlit keyboard, USB-C, USB-A x2, HDMI, SD card, Webcam, Fingerprint reader, Windows 11 Home
